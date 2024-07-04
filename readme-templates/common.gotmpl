@@ -1,0 +1,11 @@
+{{ define "common.repoOwner"}}REPO_OWNER{{- end }}
+
+{{ define "common.footer" }}
+## License
+
+[MIT](../LICENSE.md) – © {{ now | date "2006" }} [Aaron Seibert](https://aaronseibert.github.io)
+{{- end }}
+
+{{ define "common.badges" }}
+[![release](GITHUB_SERVER/GITHUB_REPO/actions/workflows/ci.yml/badge.svg)](GITHUB_SERVER/GITHUB_REPO/actions/workflows/ci.yml)
+{{- end }}

@@ -1,0 +1,40 @@
+name: Generate Helm Docs
+on:
+  workflow_call:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: AaronSeibert/ci-utils
+          path: ./ci-utils
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: Install Helm Docs
+        run: go install github.com/norwoodj/helm-docs/cmd/helm-docs@latest
+      - name: Retrieve Generated Files
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Update Chart.yaml
+        run: cat artifacts/Chart.yaml > Chart.yaml
+      - name: Replace Template Values
+        run: |
+          sed -i "s|GITHUB_SERVER|${GITHUB_SERVER_URL}|g" ./ci-utils/readme-templates/common.gotmpl
+          sed -i "s|GITHUB_REPO|${GITHUB_REPOSITORY}|g" ./ci-utils/readme-templates/common.gotmpl
+          sed -i "s|REPO_OWNER|${GITHUB_REPOSITORY_OWNER}|g" ./ci-utils/readme-templates/common.gotmpl
+      - name: Generate README.md
+        run: |
+          $HOME/go/bin/helm-docs \
+            -t ./ci-utils/readme-templates/common.gotmpl \
+            -t ./ci-utils/readme-templates/charts.gotmpl \
+            -t ./ci-utils/readme-templates/README.md.gotmpl
+      - name: Upload readme for other flows 
+        uses: actions/upload-artifact@v4
+        with:
+          name: readme
+          path: README.md

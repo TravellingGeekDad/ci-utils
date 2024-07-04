@@ -1,0 +1,59 @@
+name: Bump Version and generate changelog
+on:
+  workflow_call:
+    outputs:
+      version:
+        description: "The generated version"
+        value: ${{ jobs.bump-version.outputs.version }}
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout Helm Chart
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Checkout ci-tools
+        uses: actions/checkout@v4
+        with:
+          repository: AaronSeibert/ci-utils
+          path: ./ci-utils
+      - run: pip install -r ./ci-utils/auto-versioning/requirements.txt
+      - id: version
+        run: echo "version=$(python ./ci-utils/auto-versioning/bump_version.py)" >> $GITHUB_OUTPUT
+  update-version:
+    runs-on: ubuntu-latest
+    needs: bump-version
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Inject version to Helm chart
+        env:
+          VERSION: ${{ needs.bump-version.outputs.version }}
+        run: |
+          sed -i "s/^version:.*/version: $VERSION/g" ./Chart.yaml
+      - name: Upload Chart.yaml for other flows 
+        uses: actions/upload-artifact@v4
+        with:
+          name: chart
+          path: Chart.yaml
+  create-changelog:
+    runs-on: ubuntu-latest
+    needs: bump-version
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create Changelog
+        run: |
+          pip install git-changelog
+          git-changelog -B ${{ needs.bump-version.outputs.version }} -c angular -o CHANGELOG.md -s "fix,feat,doc"
+      - name: Upload Chart.yaml for other flows 
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog
+          path: CHANGELOG.md
+
